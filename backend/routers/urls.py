@@ -58,7 +58,7 @@ def get_by_uid(uid: str):
 
 
 # entries are stateless and need not to be deleted for now
-@router.delete("/{uid}/", status_code=200)
+@router.delete("/{uid}/", status_code=204)
 def delete_by_uid(uid: str, db: Annotated[Session, Depends(get_db)]):
     sln = decode_uid(uid)
     entry = db.get(URLModel, sln)
