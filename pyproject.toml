@@ -1,0 +1,11 @@
+[project]
+name = "URLShortener"
+version = "0.1"
+requires-python= ">=3.11"
+dependencies = [
+    "fastapi[standard]>=0.140.0",
+    "sqids>=0.5.0",
+    "psycopg>=3.3.0",
+    "sqlalchemy>=2.1.0",
+    "python-dotenv>=1.1.0"
+]
