@@ -1,6 +1,7 @@
-from config import DATABASE_URL
 from sqlalchemy import Column, Integer, String, Text, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+from environment import DATABASE_URL
 
 Base = declarative_base()
 
@@ -11,6 +12,7 @@ class URLModel(Base):
     sln = Column(Integer, primary_key=True, index=True, autoincrement=True)
     uid = Column(String(7), unique=True, index=False, nullable=True)
     l_url = Column(Text, nullable=False)
+    clicks = Column(Integer, server_default="0", default=0, nullable=False)
 
 
 engine = create_engine(DATABASE_URL)

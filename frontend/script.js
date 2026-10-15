@@ -26,7 +26,12 @@ form.addEventListener('submit', async (e) => {
 
         if (!response.ok) {
             const errData = await response.json();
-            throw new Error(errData.detail || 'Failed to shorten URL');
+        // Check if it's a rate limit error (Status 429)
+        if (response.status === 429) {
+            // errData.detail will contain: "Rate limit exceeded: 3 per 1 second"
+            throw new Error(errData.detail || "Too many requests!! Pleas slow down");
+        }
+        throw new Error(errData.detail || 'Failed to shorten URL');
         }
 
         const data = await response.json();

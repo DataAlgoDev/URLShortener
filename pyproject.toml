@@ -7,5 +7,8 @@ dependencies = [
     "sqids>=0.5.0",
     "psycopg>=3.3.0",
     "sqlalchemy>=2.1.0",
-    "python-dotenv>=1.1.0"
+    "python-dotenv>=1.1.0",
+    "slowapi>=0.1.5",
+    "cachetools>=7.0.0",
+    "alembic>=1.16.0"
 ]
