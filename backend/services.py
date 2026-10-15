@@ -2,8 +2,7 @@ import random
 from functools import lru_cache
 
 from config import SECRET_SALT
-from database import SessionLocal
-from models import URLModel
+from database import SessionLocal, URLModel
 from sqids import Sqids
 
 from fastapi import HTTPException

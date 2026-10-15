@@ -1,8 +1,7 @@
 import time
 from typing import Annotated
 
-from database import get_db
-from models import URLModel
+from database import URLModel, get_db
 from pydantic import BaseModel, HttpUrl
 from services import decode_uid, encode_sln, get_url_entry_from_db
 from sqlalchemy.orm import Session

@@ -1,10 +1,20 @@
 from config import DATABASE_URL
-from sqlalchemy import create_engine
+from sqlalchemy import Column, Integer, String, Text, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+Base = declarative_base()
+
+
+class URLModel(Base):
+    __tablename__ = "urls"
+
+    sln = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    uid = Column(String(7), unique=True, index=False, nullable=True)
+    l_url = Column(Text, nullable=False)
+
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
 
 
 def get_db():
