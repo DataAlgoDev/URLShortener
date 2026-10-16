@@ -1,11 +1,11 @@
 import random
 import time
 from collections import defaultdict
-from threading import Thread, Lock
+from threading import Lock, Thread
 
 from cachetools import LRUCache
-from environment import SECRET_SALT
 from database import SessionLocal, URLModel
+from environment import SECRET_SALT
 from sqids import Sqids
 
 from fastapi import HTTPException

@@ -1,7 +1,6 @@
+from environment import DATABASE_URL
 from sqlalchemy import Column, Integer, String, Text, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-
-from environment import DATABASE_URL
 
 Base = declarative_base()
 
