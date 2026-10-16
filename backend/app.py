@@ -5,19 +5,22 @@ from database import Base, URLModel, engine, get_db
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, HttpUrl
+from security import decode_uid, encode_sln
 from services import (
     count_visits,
-    decode_uid,
-    encode_sln,
     evict_cache_entry,
     get_url_entry_from_db,
+    user_validate,
 )
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+
+DEFAULT_USER_CREATE_LIMIT = "1/second"
+DEFAULT_GET_LIMIT = "3/second"
 
 # Create database on startup for development
 Base.metadata.create_all(bind=engine)
@@ -42,16 +45,16 @@ class URLRequest(BaseModel):
 
 
 # Get all URLs in database
-@app.get("/urls/")
+@app.get("/urls/", name="Get all URLs in database")
 def get_all_urls(db: Annotated[Session, Depends(get_db)]):
     all_urls = db.query(URLModel).all()
-    print(all_urls, len(all_urls))
+    print(len(all_urls))
     return all_urls
 
 
 # Create new url entry with rate limiting
 @app.post("/shorten/", status_code=201)
-@limiter.limit("1/second")  # Token bucket capacity
+@limiter.limit(DEFAULT_USER_CREATE_LIMIT)
 def shorten_url(
     request: Request, body: URLRequest, db: Annotated[Session, Depends(get_db)]
 ):
@@ -74,7 +77,7 @@ def shorten_url(
 
 # Query database using decoded uid with rate limiting
 @app.get("/{uid}/", status_code=200)
-@limiter.limit("3/second")
+@limiter.limit(limit_value=DEFAULT_GET_LIMIT)  # Fixed token bucket for all get calls
 def get_by_uid(request: Request, uid: str):
     before = time.perf_counter()
     entry = get_url_entry_from_db(uid)
@@ -85,13 +88,20 @@ def get_by_uid(request: Request, uid: str):
     return entry
 
 
-# Delete entry
-@app.delete("/{uid}/", status_code=200)
-def delete_by_uid(uid: str, db: Annotated[Session, Depends(get_db)]):
+## Delete entry requires user validation
+@app.delete("/{uid}/", status_code=status.HTTP_200_OK)
+def delete_by_uid(
+    request: Request,
+    uid: str,
+    db: Annotated[Session, Depends(get_db)],
+    userid: Annotated[str, Depends(user_validate)],
+):
     sln = decode_uid(uid)
     entry = db.get(URLModel, sln)
     if not entry:
-        raise HTTPException(status_code=404, detail="UID not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="UID not found"
+        )
     db.delete(entry)
     db.commit()
     # Removes stale entry from cache

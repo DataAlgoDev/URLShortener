@@ -1,6 +1,6 @@
 from environment import DATABASE_URL
-from sqlalchemy import Column, Integer, String, Text, create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import Column, ForeignKey, Integer, String, Text, create_engine
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
 Base = declarative_base()
 
@@ -12,6 +12,22 @@ class URLModel(Base):
     uid = Column(String(7), unique=True, index=False, nullable=True)
     l_url = Column(Text, nullable=False)
     clicks = Column(Integer, server_default="0", default=0, nullable=False)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    owner = relationship("UserModel", back_populates="urls")
+
+
+class UserModel(Base):
+    __tablename__ = "users"
+    user_id = Column(Integer, primary_key=True, index=True, autoincrement=False)
+    user_name = Column(Text, nullable=False, unique=True)
+    hashed_pwd = Column(String(255), nullable=False)
+    urls = relationship(
+        "URLModel", back_populates="owner", cascade="all, delete-orphan"
+    )
 
 
 engine = create_engine(DATABASE_URL)

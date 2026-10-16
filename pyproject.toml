@@ -10,5 +10,6 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "slowapi>=0.1.5",
     "cachetools>=7.0.0",
-    "alembic>=1.16.0"
+    "alembic>=1.16.0",
+    "bcrypt"
 ]
