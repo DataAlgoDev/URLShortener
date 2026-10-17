@@ -10,6 +10,7 @@ class URLModel(Base):
 
     sln = Column(Integer, primary_key=True, index=True, autoincrement=True)
     uid = Column(String(7), unique=True, index=False, nullable=True)
+    s_url = Column(Text, nullable=True)
     l_url = Column(Text, nullable=False)
     clicks = Column(Integer, server_default="0", default=0, nullable=False)
     user_id = Column(
