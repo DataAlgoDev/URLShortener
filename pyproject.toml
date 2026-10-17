@@ -11,5 +11,6 @@ dependencies = [
     "slowapi>=0.1.5",
     "cachetools>=7.0.0",
     "alembic>=1.16.0",
-    "bcrypt"
+    "bcrypt>=4.2.0",
+    "redis>=8.0.0"
 ]

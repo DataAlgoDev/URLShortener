@@ -22,8 +22,8 @@ class URLModel(Base):
 
 class UserModel(Base):
     __tablename__ = "users"
-    user_id = Column(Integer, primary_key=True, index=True, autoincrement=False)
-    user_name = Column(Text, nullable=False, unique=True)
+    user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_name = Column(Text, nullable=False, index=True, unique=True)
     hashed_pwd = Column(String(255), nullable=False)
     urls = relationship(
         "URLModel", back_populates="owner", cascade="all, delete-orphan"

@@ -1,20 +1,26 @@
+import secrets
 import time
 from collections import defaultdict
 from threading import Lock, Thread
 
+import redis
 from cachetools import LRUCache
 from database import SessionLocal, URLModel
 from security import decode_uid
 
-from fastapi import Cookie, HTTPException, status
+from fastapi import Cookie, HTTPException
+
+TOKEN_BYTES = 32
+SESSION_TTL = 21600
+SESSION_STORE_SIZE = 2
 
 _buffer_lock = Lock()
 _cache_lock = Lock()
 
 _click_counter = defaultdict(int)
 url_cache = LRUCache(maxsize=100)
-# stores sessionID(str) as key and userID(int), expiration(float) as values
-session_store: dict[str, tuple[int, float]] = {}
+
+redis_client = redis.Redis(host="localhost", port=6379, db=0)
 
 
 # gets entry from lru cache in case of a cache hit else queries db
@@ -77,12 +83,20 @@ flusher_thread = Thread(target=_bg_count_flush, daemon=True)
 flusher_thread.start()
 
 
-# Returns userID from a valid session else raises error
-def user_validate(session_id: str | None = Cookie(default=None)) -> str:
-    values = session_store.get(session_id)
-    if not values or values[1] < time.time():
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required. Please login",
-        )
-    return values[0]
+# returns user_id of a session
+def session_user_get(session_id=Cookie(default=None)) -> int | None:
+    return None if not session_id else int(redis_client.get(f"session:{session_id}"))
+
+
+# Returns whether a user session exists of not
+def user_validate(session_id=Cookie(default=None)) -> str:
+    user_id = redis_client.get(f"session:{session_id}")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized user")
+    return int(user_id)
+
+
+def create_session_token(user_id: int) -> str:
+    new_token = secrets.token_hex(TOKEN_BYTES)
+    redis_client.setex(f"session:{new_token}", SESSION_TTL, user_id)
+    return new_token
