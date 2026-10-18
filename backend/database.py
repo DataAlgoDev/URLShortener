@@ -1,6 +1,7 @@
-from environment import DATABASE_URL
 from sqlalchemy import Column, ForeignKey, Integer, String, Text, create_engine
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+
+from backend.environment import DATABASE_URL
 
 Base = declarative_base()
 

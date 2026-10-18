@@ -5,9 +5,10 @@ from threading import Lock, Thread
 
 import redis
 from cachetools import LRUCache
-from database import SessionLocal, URLModel
-from security import decode_uid
 
+from backend.database import SessionLocal, URLModel
+from backend.environment import REDIS_URL
+from backend.security import decode_uid
 from fastapi import Cookie, HTTPException
 
 TOKEN_BYTES = 32
@@ -20,7 +21,7 @@ _cache_lock = Lock()
 _click_counter = defaultdict(int)
 url_cache = LRUCache(maxsize=100)
 
-redis_client = redis.Redis(host="localhost", port=6379, db=0)
+redis_client = redis.from_url(REDIS_URL)
 
 
 def get_url_entry_from_db(uid: str):

@@ -1,9 +1,9 @@
 import random
 
 import bcrypt
-from environment import SECRET_SALT
 from sqids import Sqids
 
+from backend.environment import SECRET_SALT
 from fastapi import HTTPException
 
 

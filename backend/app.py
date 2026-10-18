@@ -1,12 +1,18 @@
 import time
+from pathlib import Path
 from typing import Annotated
 
-from database import Base, URLModel, UserModel, engine, get_db
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, HttpUrl
-from security import decode_uid, encode_sln, hash_password, verify_password
-from services import (
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from sqlalchemy.orm import Session
+
+from backend.database import Base, URLModel, UserModel, engine, get_db
+from backend.security import decode_uid, encode_sln, hash_password, verify_password
+from backend.services import (
     SESSION_TTL,
     count_visits,
     create_session_token,
@@ -16,14 +22,11 @@ from services import (
     session_user_get,
     user_validate,
 )
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
-from sqlalchemy.orm import Session
-
 from fastapi import Cookie, Depends, FastAPI, HTTPException, Request, Response, status
 
 BASE_URL = "http://localhost:8000/"
+BASE_DIR = Path(__file__).resolve().parent  # points to /app/backend
+FRONTEND_DIR = BASE_DIR.parent / "frontend"  # points to /app/frontend
 
 GUEST_CREATE_LIMIT = "1/second"
 USER_CREATE_LIMIT = "1/second"
@@ -49,12 +52,12 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Serving static files from one level up in the 'frontend' folder
-app.mount("/static", StaticFiles(directory="../frontend"), name="static")
+app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
 @app.get("/")
 def root():
-    return FileResponse("../frontend/index.html")
+    return FileResponse(f"{FRONTEND_DIR}/index.html")
 
 
 # Get all URLs in database
@@ -145,7 +148,7 @@ def sign_in(body: SignupRequest, db: Annotated[Session, Depends(get_db)]):
 
 @app.get("/users/dashboard/", status_code=200)
 def user_dashboard(user_id: Annotated[int, Depends(user_validate)]):
-    return FileResponse("../frontend/dashboard.html")
+    return FileResponse(f"{FRONTEND_DIR}/dashboard.html")
 
 
 @app.post("/users/logout/", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,4 +1,23 @@
-*.env
-*venv/
-*.lock
-*.pyc
+# --- Environment Variables & Secrets ---
+.env
+.env.*
+*.secret
+
+# --- Python ---
+.venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.uv_cache/
+
+# --- IDEs & OS Files ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log

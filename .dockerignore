@@ -1,0 +1,38 @@
+# --- Version Control & CI ---
+.git
+.gitignore
+.github/
+
+# --- Python Virtual Environments & Caches ---
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.uv_cache/
+
+# --- Environment Secrets & Configs ---
+.env
+.env.*
+*.secret
+
+# --- Docker & Orchestration Files ---
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# --- IDEs & OS Metadata ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Documentation & Logs ---
+README.md
+*.log
+docs/
+tests/
