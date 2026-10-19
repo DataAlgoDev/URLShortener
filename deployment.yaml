@@ -1,0 +1,64 @@
+# Save the output of this file and use kubectl create -f to import
+# it into Kubernetes.
+#
+# Created with podman-5.7.0
+
+# NOTE: The namespace sharing for a pod has been modified by the user and is not the same as the
+# default settings for kubernetes. This can lead to unexpected behavior when running the generated
+# kube yaml in a kubernetes cluster.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    io.kubernetes.cri-o.SandboxID/urlshortenerdb1: 9e134d96d45d9aa8dbbfd2fe9b18e4f39d90af0ab409d96407135c5a95a2b626
+    io.kubernetes.cri-o.SandboxID/urlshortenerredis1: 9e134d96d45d9aa8dbbfd2fe9b18e4f39d90af0ab409d96407135c5a95a2b626
+    io.kubernetes.cri-o.SandboxID/urlshortenerweb1: 9e134d96d45d9aa8dbbfd2fe9b18e4f39d90af0ab409d96407135c5a95a2b626
+  creationTimestamp: "2026-10-19T00:44:13Z"
+  labels:
+    app: podurlshortener
+  name: podurlshortener
+spec:
+  containers:
+  - args:
+    - postgres
+    env:
+    - name: POSTGRES_USER
+      value: ajayn
+    - name: POSTGRES_PASSWORD
+      value: "11223344"
+    - name: POSTGRES_DB
+      value: url_shortener
+    image: docker.io/library/postgres:15-alpine
+    name: urlshortenerdb1
+    volumeMounts:
+    - mountPath: /var/lib/postgresql/data
+      name: urlshortener-pgdata-pvc
+  - args:
+    - redis-server
+    image: docker.io/library/redis:7-alpine
+    name: urlshortenerredis1
+    ports:
+    - containerPort: 6379
+      hostPort: 6379
+    volumeMounts:
+    - mountPath: /data
+      name: urlshortener-redisdata-pvc
+  - env:
+    - name: DATABASE_URL
+      value: postgresql://ajayn:11223344@db:5432/url_shortener
+    - name: REDIS_URL
+      value: redis://redis:6379/0
+    image: localhost/urlshortener_web:latest
+    name: urlshortenerweb1
+    ports:
+    - containerPort: 8000
+      hostPort: 8000
+  volumes:
+  - name: urlshortener-pgdata-pvc
+    persistentVolumeClaim:
+      claimName: urlshortener-pgdata
+  - name: urlshortener-redisdata-pvc
+    persistentVolumeClaim:
+      claimName: urlshortener-redisdata
+

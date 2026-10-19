@@ -14,7 +14,7 @@ services:
       - redis
 
   db:
-    image: postgres:15-alpine
+    image: docker.io/library/postgres:15-alpine
     restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -24,7 +24,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   redis:
-    image: redis:7-alpine
+    image: docker.io/library/redis:7-alpine
     restart: always
     volumes:
       - redisdata:/data
