@@ -1,4 +1,4 @@
-# version: '3.8'
+version: '3.8'
 
 services:
   web:
@@ -12,6 +12,13 @@ services:
     depends_on:
       - db
       - redis
+    healthcheck:
+      # Uses Python natively so you don't need to install curl in your Dockerfile
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s       # Check every 10 seconds
+      timeout: 5s         # Fail if it takes longer than 5 seconds
+      retries: 3          # Require 3 consecutive failures before marking unhealthy
+      start_period: 10s   # Give the app 10 seconds to boot up before starting checks
 
   db:
     image: docker.io/library/postgres:15-alpine

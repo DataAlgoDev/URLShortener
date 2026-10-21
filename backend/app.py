@@ -1,3 +1,4 @@
+import logging
 import time
 from pathlib import Path
 from typing import Annotated
@@ -8,6 +9,7 @@ from pydantic import BaseModel, HttpUrl
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from backend.database import Base, URLModel, UserModel, engine, get_db
@@ -19,6 +21,7 @@ from backend.services import (
     delete_session,
     evict_cache_entry,
     get_url_entry_from_db,
+    redis_client,
     session_user_get,
     user_validate,
 )
@@ -42,6 +45,7 @@ class SignupRequest(BaseModel):
     password: str
 
 
+logger = logging.getLogger("uvicorn.error")
 # Create database on startup for development
 Base.metadata.create_all(bind=engine)
 
@@ -218,6 +222,32 @@ def delete_by_uid(
     # Removes stale entry from cache
     evict_cache_entry(uid)
     return {"message": f"Successfully deleted URL with uid '{uid}'"}
+
+
+@app.get("/health", status_code=status.HTTP_200_OK)
+def readiness_check(response: Response, db: Annotated[Session, Depends(get_db)]):
+    is_healthy = True
+    health_status = {"status": "healthy", "dependencies": {}}
+    # Postgres
+    try:
+        db.execute(text("SELECT 1"))
+        health_status["dependencies"]["postgres"] = {"status": "up"}
+    except Exception as e:
+        is_healthy = False
+        health_status["dependencies"]["postgres"] = {"status": "down", "error": str(e)}
+    # redis
+    try:
+        if redis_client.ping():
+            health_status["dependencies"]["redis"] = {"status": "up"}
+        else:
+            raise Exception("Ping Failed")
+    except Exception as e:
+        is_healthy = False
+        health_status["dependencies"]["redis"] = {"status": "down", "error": str(e)}
+    if not is_healthy:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        health_status["status"] = "unhealthy"
+    return health_status
 
 
 #### Helpers ####

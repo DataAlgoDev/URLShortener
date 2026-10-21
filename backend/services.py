@@ -96,10 +96,13 @@ def session_user_get(session_id=Cookie(default=None)) -> int | None:
 # Returns whether a user session exists of not
 def user_validate(session_id=Cookie(default=None)) -> str:
     """Check if the user is authenticated"""
-    print(session_id)
-    user_id = redis_client.get(f"session:{session_id}")
+    redis_key = f"session:{session_id}"
+    user_id = redis_client.get(redis_key)
     if not user_id:
         raise HTTPException(status_code=401, detail="Unauthorized user")
+    # SLIDING WINDOW: Reset the TTL back to full SESSION_TTL on every valid request
+    redis_client.expire(redis_key, SESSION_TTL)
+    print(redis_key, redis_client.ttl(redis_key))
     return int(user_id)
 
 
