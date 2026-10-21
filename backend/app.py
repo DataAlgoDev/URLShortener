@@ -1,4 +1,5 @@
 import logging
+import sys
 import time
 from pathlib import Path
 from typing import Annotated
@@ -6,10 +7,12 @@ from typing import Annotated
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, HttpUrl
+from redis.exceptions import RedisError
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.database import Base, URLModel, UserModel, engine, get_db
@@ -26,6 +29,14 @@ from backend.services import (
     user_validate,
 )
 from fastapi import Cookie, Depends, FastAPI, HTTPException, Request, Response, status
+
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    force=True,  # Overrides Gunicorn's default log suppression
+)
+logger = logging.getLogger(__name__)
 
 BASE_URL = "http://localhost:8000/"
 BASE_DIR = Path(__file__).resolve().parent  # points to /app/backend
@@ -45,7 +56,6 @@ class SignupRequest(BaseModel):
     password: str
 
 
-logger = logging.getLogger("uvicorn.error")
 # Create database on startup for development
 Base.metadata.create_all(bind=engine)
 
@@ -71,7 +81,7 @@ def get_all_urls(
     user: Annotated[str, Depends(user_validate)],
 ):
     all_urls = db.query(URLModel).all()
-    print(len(all_urls))
+    logger.info("%s", len(all_urls))
     return all_urls
 
 
@@ -199,7 +209,7 @@ def get_by_uid(request: Request, uid: str):
     diff = time.perf_counter() - before
     # increment the counter for uid
     count_visits(uid)
-    print(f"retrieval time : {diff:.4f}")
+    logger.info(f"URL retrieval time : {diff:.4f}")
     return entry
 
 
@@ -232,21 +242,40 @@ def readiness_check(response: Response, db: Annotated[Session, Depends(get_db)])
     try:
         db.execute(text("SELECT 1"))
         health_status["dependencies"]["postgres"] = {"status": "up"}
-    except Exception as e:
+    except SQLAlchemyError as sqlal_err:
         is_healthy = False
-        health_status["dependencies"]["postgres"] = {"status": "down", "error": str(e)}
+        health_status["dependencies"]["postgres"] = {
+            "status": "down",
+            "error": str(sqlal_err),
+        }
+        logger.error("Error occurred while checking postgres db : %s", sqlal_err)
+    except Exception as e:
+        logger.exception("Unexpected error occurred! : %s", e)  # noqa: TRY401
     # redis
     try:
         if redis_client.ping():
             health_status["dependencies"]["redis"] = {"status": "up"}
         else:
-            raise Exception("Ping Failed")
-    except Exception as e:
+            raise ConnectionError("Ping Failed")
+    except ConnectionError as conn_err:
         is_healthy = False
-        health_status["dependencies"]["redis"] = {"status": "down", "error": str(e)}
+        health_status["dependencies"]["redis"] = {
+            "status": "down",
+            "error": str(conn_err),
+        }
+    except RedisError as redis_err:
+        logger.error("Error while checking redis status :%s", redis_err)
+        is_healthy = False
+        health_status["dependencies"]["redis"] = {
+            "status": "down",
+            "error": str(redis_err),
+        }
+    except Exception as e:
+        logger.exception("Unexpected error occurred! : %s", e)  # noqa: TRY401
     if not is_healthy:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         health_status["status"] = "unhealthy"
+        logger.error("One or more dependencies are not healthy! : %s", health_status)
     return health_status
 
 

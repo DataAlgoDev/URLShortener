@@ -1,3 +1,4 @@
+import logging
 import secrets
 import time
 from collections import defaultdict
@@ -10,6 +11,8 @@ from backend.database import SessionLocal, URLModel
 from backend.environment import REDIS_URL
 from backend.security import decode_uid
 from fastapi import Cookie, HTTPException
+
+logger = logging.getLogger(__name__)
 
 TOKEN_BYTES = 32
 SESSION_TTL = 60
@@ -74,7 +77,7 @@ def _bg_count_flush():
             db.commit()
         except Exception as e:
             db.rollback()
-            print(f"Error flushing URL analytics! {e}")
+            logger.exception(f"Error flushing URL analytics! {e}")
             # Emergency roll back to global
             with _buffer_lock:
                 for uid, count in local_counts.items():
@@ -88,13 +91,13 @@ flusher_thread.start()
 
 
 # returns user_id of a session
-def session_user_get(session_id=Cookie(default=None)) -> int | None:
+def session_user_get(session_id=Cookie(default=None)) -> int | None:  # noqa: B008
     """Returns session id"""
     return None if not session_id else int(redis_client.get(f"session:{session_id}"))
 
 
 # Returns whether a user session exists of not
-def user_validate(session_id=Cookie(default=None)) -> str:
+def user_validate(session_id=Cookie(default=None)) -> str:  # noqa: B008
     """Check if the user is authenticated"""
     redis_key = f"session:{session_id}"
     user_id = redis_client.get(redis_key)
@@ -102,7 +105,7 @@ def user_validate(session_id=Cookie(default=None)) -> str:
         raise HTTPException(status_code=401, detail="Unauthorized user")
     # SLIDING WINDOW: Reset the TTL back to full SESSION_TTL on every valid request
     redis_client.expire(redis_key, SESSION_TTL)
-    print(redis_key, redis_client.ttl(redis_key))
+    logger.info("%s : %s", redis_key, redis_client.ttl(redis_key))
     return int(user_id)
 
 
